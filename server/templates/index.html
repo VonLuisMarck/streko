@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FANCY SPIDER | Command & Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='fancy-spider.css') }}">
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div id="container">
+        <!-- Sidebar -->
+        <div id="sidebar">
+            <!-- Logo -->
+            <div class="logo">
+                <i class="fas fa-spider"></i>
+                <h1>★ FANCY SPIDER ★</h1>
+                <div class="version">v3.1.8</div>
+            </div>
+            
+            <!-- Navigation -->
+            <nav>
+                <a href="#" class="nav-item active" data-tab="command-hub">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Command Hub</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="targets">
+                    <i class="fas fa-crosshairs"></i>
+                    <span>Compromised Targets</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="terminal">
+                    <i class="fas fa-terminal"></i>
+                    <span>Remote Terminal</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="obfuscator">
+                    <i class="fas fa-mask"></i>
+                    <span>Code Obfuscator</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="attack-vectors">
+                    <i class="fas fa-virus"></i>
+                    <span>Attack Vectors</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="config">
+                    <i class="fas fa-cogs"></i>
+                    <span>Operations Config</span>
+                </a>
+            </nav>
+            
+            <!-- Stats -->
+            <div class="stats">
+                <h3>☭ OPERATION STATUS</h3>
+                <div class="stat-item">
+                    <div class="label">Active Targets</div>
+                    <div class="value" id="active-targets">{{ agents|length }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="label">Pending Exploits</div>
+                    <div class="value" id="pending-exploits">{{ tasks|selectattr('status', 'equalto', 'pending')|list|length }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="label">Completed Ops</div>
+                    <div class="value" id="completed-ops">{{ tasks|selectattr('status', 'equalto', 'completed')|list|length }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="label">Uptime</div>
+                    <div class="value" id="uptime">00:00:00</div>
+                </div>
+                <div class="stat-item">
+                    <div class="label">Moscow Time</div>
+                    <div class="value" id="moscow-time">--:--</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div id="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div class="title">
+                    <h2 id="current-tab-title">Command Hub</h2>
+                    <div class="subtitle" id="current-tab-subtitle">// Operation Control Center</div>
+                </div>
+                <button class="btn primary" id="refresh-btn">
+                    <i class="fas fa-sync-alt"></i> REFRESH DATA
+                </button>
+            </div>
+            
+            <!-- Command Hub Tab -->
+            <div id="command-hub-tab" class="tab active">
+                <div class="grid">
+                    <!-- Stats Panel -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3><i class="fas fa-chart-bar"></i> OPERATION STATISTICS</h3>
+                            <span>Updated now</span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="stats-grid">
+                                <div class="stat-box">
+                                    <div class="stat-value">{{ agents|length }}</div>
+                                    <div class="stat-label">Compromised Targets</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-value">{{ tasks|length }}</div>
+                                    <div class="stat-label">Total Exploits</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-value">{{ results|length }}</div>
+                                    <div class="stat-label">Intel Packages</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-value" id="success-rate">94%</div>
+                                    <div class="stat-label">Success Rate</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Panel -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3><i class="fas fa-globe"></i> TARGET LOCATIONS</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="map-container">
+                                <div class="map-overlay"></div>
+                                <div class="map-grid"></div>
+                                {% for id, agent in agents.items() %}
+                                    <!-- Map dots would go here -->
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Active Targets Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-crosshairs"></i> ACTIVE TARGETS</h3>
+                        <button class="btn">
+                            <i class="fas fa-filter"></i> FILTER
+                        </button>
+                    </div>
+                    <div class="panel-body">
+                        <div class="targets-container">
+                            {% if agents %}
+                                {% for id, agent in agents.items() %}
+                                <div class="target-card">
+                                    <div class="target-header">
+                                        <div class="target-id">{{ id }}</div>
+                                        <div class="target-status {% if not is_agent_active(agent.last_seen) %}offline{% else %}active{% endif %}">
+                                            {% if not is_agent_active(agent.last_seen) %}OFFLINE{% else %}ACTIVE{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="target-details">
+                                        First seen: {{ agent.first_seen }}<br>
+                                        Last seen: {{ agent.last_seen }}
+                                    </div>
+                                    <div class="target-actions">
+                                        <button class="btn" onclick="showTaskModal('{{ id }}')">
+                                            <i class="fas fa-rocket"></i> EXPLOIT
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-robot"></i>
+                                    <h4>No targets compromised</h4>
+                                    <p>Waiting for agents to connect...</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Active Exploits Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-rocket"></i> ACTIVE EXPLOITS</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="exploits-container">
+                            {% if tasks %}
+                                {% for id, task in tasks.items() %}
+                                <div class="exploit-card">
+                                    <div class="exploit-header">
+                                        <div class="exploit-id">
+                                            {{ id[:8] }}...
+                                            <span class="exploit-type">{{ task.task_type }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="exploit-details">
+                                        Target: {{ task.agent_id }}<br>
+                                        <div class="exploit-status">
+                                            {% if task.status == 'pending' %}
+                                                <span class="badge pending">QUEUED</span>
+                                            {% elif task.status == 'completed' %}
+                                                <span class="badge success">EXECUTED</span>
+                                            {% elif task.status == 'failed' %}
+                                                <span class="badge error">FAILED</span>
+                                            {% else %}
+                                                <span class="badge">{{ task.status }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="exploit-actions">
+                                        <button class="btn" onclick="viewPayload('{{ id }}', `{{ task.code }}`)">
+                                            <i class="fas fa-eye"></i> View Payload
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-rocket"></i>
+                                    <h4>No active exploits</h4>
+                                    <p>Launch an exploit from the target menu</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Intelligence Data Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-brain"></i> INTELLIGENCE DATA</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="intel-container">
+                            {% if results %}
+                                {% for id, result in results.items() %}
+                                <div class="intel-card">
+                                    <div class="intel-header">
+                                        <div class="intel-id">
+                                            TARGET: {{ result.agent_id }}<br>
+                                            EXPLOIT: {{ result.task_id[:8] }}...
+                                        </div>
+                                    </div>
+                                    <div class="intel-details">
+                                        <div class="timestamp">{{ result.timestamp }}</div>
+                                    </div>
+                                    <div class="intel-actions">
+                                        <button class="btn" onclick="viewIntel({{ result.data }})">
+                                            <i class="fas fa-eye"></i> View Intel
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-brain"></i>
+                                    <h4>No intelligence data</h4>
+                                    <p>Results will appear here after exploits complete</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compromised Targets Tab -->
+            <div id="targets-tab" class="tab">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-crosshairs"></i> COMPROMISED TARGETS</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="targets-container">
+                            {% if agents %}
+                                {% for id, agent in agents.items() %}
+                                <div class="target-card detailed">
+                                    <div class="target-header">
+                                        <div class="target-id">{{ id }}</div>
+                                        <div class="target-status {% if not is_agent_active(agent.last_seen) %}offline{% else %}active{% endif %}">
+                                            {% if not is_agent_active(agent.last_seen) %}OFFLINE{% else %}ACTIVE{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="target-details">
+                                        First seen: {{ agent.first_seen }}<br>
+                                        Last seen: {{ agent.last_seen }}
+                                    </div>
+                                    <div class="target-actions">
+                                        <button class="btn" onclick="showTaskModal('{{ id }}')">
+                                            <i class="fas fa-rocket"></i> EXPLOIT
+                                        </button>
+                                        <button class="btn" onclick="showTerminalTab('{{ id }}')">
+                                            <i class="fas fa-terminal"></i> TERMINAL
+                                        </button>
+                                        <button class="btn" onclick="showAttackVectorsTab('{{ id }}')">
+                                            <i class="fas fa-search"></i> ANALYZE
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-robot"></i>
+                                    <h4>No targets compromised</h4>
+                                    <p>Waiting for agents to connect...</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Remote Terminal Tab -->
+            <div id="terminal-tab" class="tab">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-terminal"></i> REMOTE TERMINAL</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="form-row">
+                            <div class="control-group">
+                                <label>SELECT TARGET:</label>
+                                <select id="terminal-target" class="form-select">
+                                    <option value="">SELECT TARGET...</option>
+                                    {% for id, agent in agents.items() %}
+                                        <option value="{{ id }}">{{ id }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label>LANGUAGE:</label>
+                                <select id="language-selector" class="form-select">
+                                    <option value="python">Python</option>
+                                    <option value="powershell">PowerShell</option>
+                                    <option value="bash">Bash</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="terminal-output" id="terminal-output"></div>
+                        
+                        <div class="terminal-input">
+                            <textarea id="command-input" placeholder="Enter command here..."></textarea>
+                            <button id="execute-command" class="btn primary">
+                                <i class="fas fa-play"></i> EXECUTE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Code Obfuscator Tab -->
+            <div id="obfuscator-tab" class="tab">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-mask"></i> PAYLOAD OBFUSCATOR</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="grid">
+                            <div>
+                                <div class="form-group">
+                                    <label>Original Payload:</label>
+                                    <textarea id="original-code" class="code-input" rows="15" placeholder="Enter code to obfuscate..."></textarea>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Language:</label>
+                                        <select id="code-language" class="form-select">
+                                            <option value="python">Python</option>
+                                            <option value="powershell">PowerShell</option>
+                                            <option value="csharp">C#</option>
+                                            <option value="javascript">JavaScript</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Target Security Product:</label>
+                                        <select id="target-security" class="form-select">
+                                            <option value="defender">Microsoft Defender</option>
+                                            <option value="crowdstrike">CrowdStrike Falcon</option>
+                                            <option value="generic">Generic (Maximum Evasion)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button id="obfuscate-btn" class="btn primary">
+                                        <i class="fas fa-magic"></i> OBFUSCATE
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="obfuscation-result" style="display: none;">
+                                <div class="form-group">
+                                    <label>Obfuscated Payload:</label>
+                                    <pre id="obfuscated-code" class="code-output"></pre>
+                                </div>
+                                <div>
+                                    <button id="deploy-obfuscated" class="btn primary">
+                                        <i class="fas fa-upload"></i> DEPLOY TO TARGET
+                                    </button>
+                                    <button id="copy-obfuscated" class="btn">
+                                        <i class="fas fa-copy"></i> COPY CODE
+                                    </button>
+                                </div>
+                                <div class="form-group">
+                                    <label>Evasion Techniques:</label>
+                                    <div id="obfuscation-explanation" class="explanation-box"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Attack Vector Analysis Tab -->
+            <div id="attack-vectors-tab" class="tab">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-virus"></i> ATTACK VECTOR ANALYSIS</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label>Select Target for Analysis:</label>
+                            <select id="analysis-agent-select" class="form-select">
+                                <option value="">SELECT TARGET...</option>
+                                {% for id, agent in agents.items() %}
+                                    <option value="{{ id }}">{{ id }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Analysis Type:</label>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="analysisType" value="basic" checked> 
+                                    Basic Analysis - Quick analysis of existing reconnaissance data
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="analysisType" value="advanced"> 
+                                    Advanced Analysis - Deep scan using LinPEAS/WinPEAS (takes several minutes)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <button id="analyze-btn" class="btn primary" disabled>
+                                <i class="fas fa-search"></i> ANALYZE ATTACK VECTORS
+                            </button>
+                        </div>
+                        
+                        <div id="analysis-loading" style="display: none;" class="loading">
+                            <div class="spinner"></div>
+                            <p>Analyzing attack vectors...</p>
+                            <p class="subtle">Analyzing target vulnerability profile...</p>
+                        </div>
+                        
+                        <div id="analysis-result" style="display: none;">
+                            <h3 style="margin: 20px 0 10px; color: #cc0000;">Attack Vector Analysis</h3>
+                            <div id="analysis-content" class="analysis-output">
+                                Run an analysis to see results...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Operations Config Tab -->
+            <div id="config-tab" class="tab">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-cogs"></i> OPERATIONS CONFIG</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label>API Key:</label>
+                            <input type="password" id="api-key" class="form-input" placeholder="Enter API key">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>AI Model:</label>
+                            <select id="default-model" class="form-select">
+                                <option value="gpt-4o">GPT-4o</option>
+                                <option value="gpt-4">GPT-4 Turbo</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Operation Codename:</label>
+                            <input type="text" id="operation-name" class="form-input" placeholder="Enter operation codename">
+                        </div>
+                        
+                        <div>
+                            <button id="save-settings-btn" class="btn primary">
+                                <i class="fas fa-save"></i> SAVE CONFIG
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    <!-- Launch Exploit Modal -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-rocket"></i> LAUNCH EXPLOIT</h2>
+                <span class="close" onclick="hideTaskModal()">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Exploit Type:</label>
+                    <select id="task_type" class="form-select">
+                        <option value="recon">System Reconnaissance</option>
+                        <option value="persistence">Persistence Implant</option>
+                        <option value="custom">Custom Payload</option>
+                    </select>
+                </div>
+                
+                <div id="customCodeBlock" style="display: none;">
+                    <div class="form-group">
+                        <label>Custom Payload Code:</label>
+                        <textarea id="custom_code" class="code-input" rows="10"></textarea>
+                        
+                        <div class="file-upload">
+                            <label>Or upload a script file:</label>
+                            <input type="file" id="script_file">
+                        </div>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="agent_id" value="">
+            </div>
+            <div class="modal-footer">
+                <button class="btn primary" onclick="submitTask()">
+                    <i class="fas fa-rocket"></i> LAUNCH
+                </button>
+                <button class="btn" onclick="hideTaskModal()">ABORT</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Refresh Confirmation Modal -->
+    <div id="refreshModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-sync-alt"></i> REFRESH OPERATION DATA</h2>
+                <span class="close" onclick="hideRefreshConfirmation()">×</span>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to refresh all operation data?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn primary" onclick="refreshDashboard()">
+                    <i class="fas fa-check"></i> CONFIRM
+                </button>
+                <button class="btn" onclick="hideRefreshConfirmation()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Deploy Obfuscated Payload Modal -->
+    <div id="deployModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-upload"></i> DEPLOY OBFUSCATED PAYLOAD</h2>
+                <span class="close" onclick="hideDeployModal()">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Select Target:</label>
+                    <select id="deploy-agent-select" class="form-select">
+                        <option value="">SELECT TARGET...</option>
+                        {% for id, agent in agents.items() %}
+                            <option value="{{ id }}">{{ id }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn primary" onclick="deployCode()">
+                    <i class="fas fa-upload"></i> DEPLOY
+                </button>
+                <button class="btn" onclick="hideDeployModal()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payload Viewer Modal -->
+    <div id="payloadModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2><i class="fas fa-eye"></i> PAYLOAD VIEWER</h2>
+                <span class="close" onclick="hidePayloadModal()">×</span>
+            </div>
+            <div class="modal-body">
+                <pre id="payload-content" class="code-view"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="hidePayloadModal()">CLOSE</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Intelligence Viewer Modal -->
+    <div id="intelModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2><i class="fas fa-brain"></i> INTELLIGENCE VIEWER</h2>
+                <span class="close" onclick="hideIntelModal()">×</span>
+            </div>
+            <div class="modal-body">
+                <pre id="intel-content" class="code-view"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="hideIntelModal()">CLOSE</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Soviet-themed elements -->
+    <div class="soviet-watermark">☭</div>
+    <div class="scan-line"></div>
+    
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
